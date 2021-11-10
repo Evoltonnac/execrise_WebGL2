@@ -2,6 +2,13 @@ import { mat4, vec3 } from 'gl-matrix';
 import { createProgram, createShader } from '../utils/glUtils';
 import vs from './shader.vs';
 import fs from './shader.fs';
+import {
+    DirLight,
+    DirLightLoc,
+    MaterialLoc,
+    PointLight,
+    PointLightLoc,
+} from './type';
 
 (function main() {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -12,6 +19,9 @@ import fs from './shader.fs';
     }
 
     const vertexSource = vs;
+
+    const NR_DIR_LIGHTS = 1;
+    const NR_POINT_LIGHTS = 3;
     const fragmentSource = fs;
 
     // init shader and program
@@ -24,30 +34,70 @@ import fs from './shader.fs';
     }
 
     // get location
+    // vs
     const positionLoc = gl.getAttribLocation(program, 'position');
     const normalLoc = gl.getAttribLocation(program, 'normal');
     const projectionLoc = gl.getUniformLocation(program, 'projection');
     const modelLoc = gl.getUniformLocation(program, 'model');
     const viewLoc = gl.getUniformLocation(program, 'view');
+    // fs
     const eyePosLoc = gl.getUniformLocation(program, 'eyePos');
-    const materialLoc = {
-        amibientLoc: gl.getUniformLocation(program, 'material.ambient'),
-        diffuseLoc: gl.getUniformLocation(program, 'material.diffuse'),
-        specularLoc: gl.getUniformLocation(program, 'material.specular'),
-        shininessLoc: gl.getUniformLocation(program, 'material.shininess'),
+    const materialLoc: MaterialLoc = {
+        ambient: gl.getUniformLocation(program, 'material.ambient'),
+        diffuse: gl.getUniformLocation(program, 'material.diffuse'),
+        specular: gl.getUniformLocation(program, 'material.specular'),
+        shininess: gl.getUniformLocation(program, 'material.shininess'),
     };
-    const lightColorLoc = gl.getUniformLocation(program, 'lightColor');
-    const parallelLightDirLoc = gl.getUniformLocation(
-        program,
-        'parallelLightDir',
-    );
-    const pointLightPosLoc = gl.getUniformLocation(program, 'pointLightPos');
-    const pointLightColorLoc = gl.getUniformLocation(
-        program,
-        'pointLightColor',
-    );
+    const dirLightsLoc: DirLightLoc[] = [];
+    for (let i = 0; i < NR_DIR_LIGHTS; i++) {
+        const dirLightLoc: DirLightLoc = {
+            lightDir: gl.getUniformLocation(
+                program,
+                `dirLights[${i}].lightDir`,
+            ),
+            ambient: gl.getUniformLocation(program, `dirLights[${i}].ambient`),
+            diffuse: gl.getUniformLocation(program, `dirLights[${i}].diffuse`),
+            specular: gl.getUniformLocation(
+                program,
+                `dirLights[${i}].specular`,
+            ),
+        };
+        dirLightsLoc.push(dirLightLoc);
+    }
+    const pointLightsLoc: PointLightLoc[] = [];
+    for (let j = 0; j < NR_POINT_LIGHTS; j++) {
+        const pointLightLoc: PointLightLoc = {
+            lightPos: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].lightPos`,
+            ),
+            constant: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].constant`,
+            ),
+            linear: gl.getUniformLocation(program, `pointLights[${j}].linear`),
+            quadratic: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].quadratic`,
+            ),
+            ambient: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].ambient`,
+            ),
+            diffuse: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].diffuse`,
+            ),
+            specular: gl.getUniformLocation(
+                program,
+                `pointLights[${j}].specular`,
+            ),
+        };
+        pointLightsLoc.push(pointLightLoc);
+    }
 
     // data
+    // attribute
     const cubeVertexPositions = new Float32Array([
         1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, -1,
         -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, -1,
@@ -60,6 +110,11 @@ import fs from './shader.fs';
         -1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
         0, 0, -1,
     ]);
+    const cubeVertexIndices = new Uint16Array([
+        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12,
+        14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+    ]);
+    // uniform
     const eyePos = vec3.fromValues(0, 4.0, 4.0);
     const material = {
         ambient: [0.19225, 0.19225, 0.19225],
@@ -67,15 +122,43 @@ import fs from './shader.fs';
         specular: [0.508273, 0.508273, 0.508273],
         shininess: 0.4,
     };
-    const lightColor = [1.0, 1.0, 0.85];
-    const parallelLightDir = [2.0, 1.0, 0];
-    const pointLightPos = [-2, -2, 1];
-    1;
-    const pointLightColor = [1.0, 0, 0];
-    const cubeVertexIndices = new Uint16Array([
-        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12,
-        14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
-    ]);
+    const dirLights: DirLight[] = [
+        {
+            lightDir: [1, 2, 0.5],
+            ambient: [0.05, 0.05, 0.05],
+            diffuse: [0.4, 0.4, 0.4],
+            specular: [0.5, 0.5, 0.5],
+        },
+    ];
+    const pointLights: PointLight[] = [
+        {
+            lightPos: [0, -1, 1.5],
+            constant: 1,
+            linear: 0.01,
+            quadratic: 0.005,
+            ambient: [0.05, 0.05, 0.05],
+            diffuse: [0.8, 0.4, 0.4],
+            specular: [1, 0.5, 0.5],
+        },
+        {
+            lightPos: [0, 2, 0],
+            constant: 1,
+            linear: 0.01,
+            quadratic: 0.005,
+            ambient: [0.05, 0.05, 0.05],
+            diffuse: [0.4, 0.4, 0.8],
+            specular: [0.5, 0.5, 1],
+        },
+        {
+            lightPos: [-2, 0, 0],
+            constant: 1,
+            linear: 0.01,
+            quadratic: 0.005,
+            ambient: [0.05, 0.05, 0.05],
+            diffuse: [0.4, 0.8, 0.4],
+            specular: [0.5, 1, 0.5],
+        },
+    ];
 
     // vertexArray
     const cubeVertexArray = gl.createVertexArray();
@@ -126,16 +209,32 @@ import fs from './shader.fs';
     mat4.lookAt(view, eyePos, [0, 0, 0], [0, 1, 0]);
     gl.uniformMatrix4fv(viewLoc, false, view);
 
-    gl.uniform3fv(materialLoc.amibientLoc, material.ambient);
-    gl.uniform3fv(materialLoc.diffuseLoc, material.diffuse);
-    gl.uniform3fv(materialLoc.specularLoc, material.specular);
-    gl.uniform1f(materialLoc.shininessLoc, material.shininess);
-
     gl.uniform3fv(eyePosLoc, eyePos);
-    gl.uniform3fv(lightColorLoc, lightColor);
-    gl.uniform3fv(parallelLightDirLoc, parallelLightDir);
-    gl.uniform3fv(pointLightPosLoc, pointLightPos);
-    gl.uniform3fv(pointLightColorLoc, pointLightColor);
+
+    gl.uniform3fv(materialLoc.ambient, material.ambient);
+    gl.uniform3fv(materialLoc.diffuse, material.diffuse);
+    gl.uniform3fv(materialLoc.specular, material.specular);
+    gl.uniform1f(materialLoc.shininess, material.shininess);
+
+    for (let i = 0; i < NR_DIR_LIGHTS; i++) {
+        let lightLoc = dirLightsLoc[i];
+        let light = dirLights[i];
+        gl.uniform3fv(lightLoc.lightDir, light.lightDir);
+        gl.uniform3fv(lightLoc.ambient, light.ambient);
+        gl.uniform3fv(lightLoc.diffuse, light.diffuse);
+        gl.uniform3fv(lightLoc.specular, light.specular);
+    }
+    for (let j = 0; j < NR_POINT_LIGHTS; j++) {
+        let lightLoc = pointLightsLoc[j];
+        let light = pointLights[j];
+        gl.uniform3fv(lightLoc.lightPos, light.lightPos);
+        gl.uniform1f(lightLoc.constant, light.constant);
+        gl.uniform1f(lightLoc.linear, light.linear);
+        gl.uniform1f(lightLoc.quadratic, light.quadratic);
+        gl.uniform3fv(lightLoc.ambient, light.ambient);
+        gl.uniform3fv(lightLoc.diffuse, light.diffuse);
+        gl.uniform3fv(lightLoc.specular, light.specular);
+    }
 
     const drawCube = function (angle: number) {
         const model = mat4.create();
