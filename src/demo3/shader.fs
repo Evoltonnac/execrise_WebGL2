@@ -64,8 +64,10 @@ vec3 calcSpecular(Material material, vec3 normal, vec3 eyeDir, vec3 dir, vec3 co
         return vec3(0.0, 0.0, 0.0);
     }
     else {
-        vec3 reflectLightDir = reflect(-dir, normal);
-        float pointLight = pow(max(dot(reflectLightDir, eyeDir), 0.0), material.shininess * 128.0);
+        // vec3 reflectLightDir = reflect(-dir, normal);
+        // float pointLight = pow(max(dot(reflectLightDir, eyeDir), 0.0), material.shininess * 128.0);
+        vec3 halfDir = normalize(dir + eyeDir);
+        float pointLight = pow(max(dot(normal, halfDir), 0.0), material.shininess * 128.0);
         return color * pointLight * material.specular;
     }
 }
