@@ -6,6 +6,7 @@ const entries = {
     demo1: './src/demo1/index.ts',
     demo2: './src/demo2/index.ts',
     demo3: './src/demo3/index.ts',
+    demo4: './src/demo4/index.ts',
 };
 
 const htmlPlugins = Object.keys(entries).map(
