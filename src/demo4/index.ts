@@ -1,5 +1,6 @@
 import forwardRender from './forwardRender';
 import deferredRender from './deferredRender';
+import './index.css';
 
 (function main() {
     let renderType = 'forward';

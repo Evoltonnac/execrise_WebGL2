@@ -35,6 +35,10 @@ module.exports = {
                 use: 'raw-loader',
             },
             {
+                test: /\.css$/i,
+                use: ['style-loader', 'css-loader'],
+            },
+            {
                 test: /\.(js|ts)?$/,
                 include: [path.resolve(__dirname, 'src')],
                 exclude: /node_modules/,
